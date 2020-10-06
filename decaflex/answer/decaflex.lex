@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdlib>
 
+
 using namespace std;
 
 %}
@@ -66,13 +67,19 @@ while					{ return 18; }
 \]					{ return 44; }
 	
 [\t\r\a\v\b\n ]+			{ return 45; }
-\/\/([\a|\b|\h|\v|\f|\r| -~]+)\n	{ return 46; }
+\/\/.*\n				{ return 46; }
 ([0-9]+)|(0(x|X)[0-9a-fA-F]+)		{ return 47; }
-\'(\\.|.)\'				{ return 48; }
-["]([^"\\\n]|{escaped_char}|\\\n)*["]	{ return 49; }
+\'([^'\\\n]|{escaped_char})\'		{ return 48; }
+\"([^"\\\n]|{escaped_char})*\"	{ return 49; }
 [a-zA-Z\_][a-zA-Z\_0-9]*		{ return 50; }
-["]([^"\\\n]|\\.|\\\n)*["]		{ cerr << "Error: unknown escape sequence in string constant" << endl; return -1; }
-.					{ cerr << "Error: unexpected character in input" << endl; return -1; }
+
+\"([^"\\\n]|\\.)*\"			{ cerr << "Error: unknown escape sequence in string constant"	<< endl; return -1; }
+\"([^"]|\n)*\"				{ cerr << "Error: newline in string constant"				<< endl; return -1; }
+\"					{ cerr << "Error: string constant is missing closing delimiter"	<< endl; return -1; }
+\'([^'\\\n]|{escaped_char})+\'	{ cerr << "Error: char constant length is greater than one"		<< endl; return -1; }
+\'					{ cerr << "Error: unterminated char constant"				<< endl; return -1; }
+\'\'					{ cerr << "Error: char constant has zero width"			<< endl; return -1; }
+.					{ cerr << "Error: unexpected character in input"			<< endl; return -1; }
 
 %%
 
