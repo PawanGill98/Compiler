@@ -17,6 +17,11 @@ int tokenpos = 1;
   /*
     Pattern definitions for all tokens 
   */
+
+var                        { return T_VAR; }
+int                        { return T_INT; }
+\;                         { return T_SEMICOLON; }
+
 package                    { return T_PACKAGE; }
 \{                         { return T_LCB; }
 \}                         { return T_RCB; }

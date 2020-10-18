@@ -24,12 +24,18 @@ using namespace std;
     std::string *sval;
  }
 
+%token T_VAR
+%token T_INT
+%token T_SEMICOLON
+
 %token T_PACKAGE
 %token T_LCB
 %token T_RCB
 %token <sval> T_ID
 
 %type <ast> extern_list decafpackage
+
+%type <ast> field_decls field_decl
 
 %%
 
@@ -48,8 +54,28 @@ extern_list: /* extern_list can be empty */
     { decafStmtList *slist = new decafStmtList(); $$ = slist; }
     ;
 
-decafpackage: T_PACKAGE T_ID T_LCB T_RCB
-    { $$ = new PackageAST(*$2, new decafStmtList(), new decafStmtList()); delete $2; }
+decafpackage: T_PACKAGE T_ID T_LCB field_decls T_RCB
+    { $$ = new PackageAST(*$2, (decafStmtList *)$4, new decafStmtList()); delete $2; }
+    ;
+
+field_decls:
+    { $$ = NULL; }
+    | field_decl field_decls
+    {
+        decafStmtList* slist;
+        if($2 == NULL) {
+            slist = new decafStmtList();
+        }
+        else {
+            slist = (decafStmtList *)$2;
+        }
+        slist->push_front($1);
+        $$ = slist;
+    }
+    ;
+
+field_decl: T_VAR T_ID T_INT T_SEMICOLON
+    { $$ = new FieldDeclAST(*$2); delete $2; }
     ;
 
 %%

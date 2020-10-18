@@ -83,4 +83,9 @@ public:
 	string str() { return string("Program") + "(" + getString(ExternList) + "," + getString(PackageDef) + ")"; }
 };
 
-
+class FieldDeclAST : public decafAST {
+	string Name;
+public:
+	FieldDeclAST(string name) : Name(name) {}
+	string str() { return string("Field") + "(" + Name + ","  + ")"; }
+};
