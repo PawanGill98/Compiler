@@ -34,6 +34,13 @@ bool                        { yylval.sval = new string(yytext); return T_BOOLTYP
 true {yylval.sval = new string(yytext); return T_TRUE;}
 false {yylval.sval = new string(yytext); return T_FALSE;}
 
+string { yylval.sval = new string(yytext); return T_STRING; }
+\( { return T_LPAREN; }
+\) { return T_RPAREN; }
+func { return T_FUNC; }
+extern { return T_EXTERN; }
+void { yylval.sval = new string(yytext); return T_VOID; }
+
 package                    { return T_PACKAGE; }
 \{                         { return T_LCB; }
 \}                         { return T_RCB; }

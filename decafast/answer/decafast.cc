@@ -83,6 +83,26 @@ public:
 	string str() { return string("Program") + "(" + getString(ExternList) + "," + getString(PackageDef) + ")"; }
 };
 
+class ExternFunctionAST : public decafAST {
+	string Name;
+	string ReturnType;
+	decafStmtList *ParameterTypeList;
+public:
+	ExternFunctionAST(string name, string type, decafStmtList *types) : Name(name), ReturnType(type), ParameterTypeList(types) {}
+	string str() {
+		return string("ExternFunction") + "(" + Name + "," + ReturnType + "," + getString(ParameterTypeList) + ")";
+	}
+};
+
+class VarDefAST : public decafAST {
+	string Type;
+public:
+	VarDefAST(string type) : Type(type) {}
+	string str() {
+		return string("VarDef") + "(" + Type + ")";
+	}
+};
+
 class FieldDeclAST : public decafAST {
 	string Name;
 	string Type;

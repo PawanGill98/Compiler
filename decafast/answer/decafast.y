@@ -39,16 +39,26 @@ using namespace std;
 %token <sval> T_TRUE
 %token <sval> T_FALSE
 
+%token T_LPAREN
+%token T_RPAREN
+%token <sval> T_STRING
+%token T_EXTERN
+%token T_FUNC
+
 %token T_PACKAGE
 %token T_LCB
 %token T_RCB
 %token <sval> T_ID
+%token <sval> T_VOID
+
+%type <ast> extern_type_list
+%type <sval> extern_type method_type
 
 %type <ast> extern_list decafpackage
 
 %type <ast> field_decls field_decl
 
-%type <sval> type
+%type <sval> decaf_type
 %type <sval> constant
 %type <s> array_type
 %type <vecptr> id_list
@@ -56,6 +66,7 @@ using namespace std;
 %%
 
 start: program
+    ;
 
 program: extern_list decafpackage
     { 
@@ -65,9 +76,62 @@ program: extern_list decafpackage
 		}
         delete prog;
     }
+    ;
 
 extern_list: /* extern_list can be empty */
     { decafStmtList *slist = new decafStmtList(); $$ = slist; }
+    | T_EXTERN T_FUNC T_ID T_LPAREN extern_type_list T_RPAREN method_type T_SEMICOLON extern_list
+    {
+        decafStmtList* slist;
+        ExternFunctionAST *ex;
+        if($9 == NULL) {
+            slist = new decafStmtList();
+        }
+        else {
+            slist = (decafStmtList *)$9;
+        }
+        ex = new ExternFunctionAST(*$3, *$7, (decafStmtList *)$5);
+        slist->push_front(ex);
+        $$ = slist;
+    }
+    ;
+
+extern_type_list: extern_type T_COMMA extern_type_list
+    {
+        decafStmtList* elist;
+        VarDefAST *ex = new VarDefAST(*$1);
+        elist = (decafStmtList *)$3;
+        elist->push_front(ex);
+        $$ = elist;
+    }
+    | extern_type
+    {
+        decafStmtList* elist;
+        elist = new decafStmtList();
+        VarDefAST *ex = new VarDefAST(*$1);
+        elist->push_front(ex);
+        $$ = elist;
+    }
+    | 
+    { $$ = NULL; }
+    ;
+
+extern_type: decaf_type
+    { $$ = $1; }
+    | T_STRING
+    { $$ = $1; }
+    ;
+
+decaf_type: T_INTTYPE
+    { $$ = $1; }
+    | T_BOOLTYPE
+    { $$ = $1; }
+    ;
+
+method_type: decaf_type
+    { $$ = $1; }
+    | T_VOID
+    { $$ = $1; }
     ;
 
 decafpackage: T_PACKAGE T_ID T_LCB field_decls T_RCB
@@ -90,7 +154,7 @@ field_decls:
     }
     ;
 
-field_decl: T_VAR id_list type T_SEMICOLON
+field_decl: T_VAR id_list decaf_type T_SEMICOLON
     {
         decafStmtList* slist = new decafStmtList();
         FieldDeclAST* node;
@@ -110,7 +174,7 @@ field_decl: T_VAR id_list type T_SEMICOLON
         }
         $$ = slist;
     }
-    | T_VAR id_list type T_ASSIGN constant T_SEMICOLON
+    | T_VAR id_list decaf_type T_ASSIGN constant T_SEMICOLON
     {
         $$ = new FieldDeclAST((*$2)[0], *$3, *$5, true);
     }
@@ -134,13 +198,7 @@ id_list: T_ID T_COMMA id_list
     }
     ;
 
-type: T_INTTYPE
-    { $$ = $1; }
-    | T_BOOLTYPE
-    { $$ = $1; }
-    ;
-
-array_type: T_LSB T_INTCONSTANT T_RSB type
+array_type: T_LSB T_INTCONSTANT T_RSB decaf_type
     {
         arr s;
         s.size = $2;
