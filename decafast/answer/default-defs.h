@@ -23,5 +23,10 @@ extern "C"
 	int yywrap(void);
 }
 
+typedef struct array {
+    std::string* size;
+    std::string* type;
+    } arr;
+
 #endif
 

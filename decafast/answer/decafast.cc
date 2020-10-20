@@ -85,7 +85,17 @@ public:
 
 class FieldDeclAST : public decafAST {
 	string Name;
+	string Type;
+	string Extra;
+	bool isAssignmnet;
 public:
-	FieldDeclAST(string name) : Name(name) {}
-	string str() { return string("Field") + "(" + Name + ","  + ")"; }
+	FieldDeclAST(string name, string type, string extra, bool assignment) : Name(name), Type(type), Extra(extra), isAssignmnet(assignment) {}
+	string str() {
+		if (isAssignmnet) {
+			return string("AssignGlobalVar") + "(" + Name + "," + Type + "," + Extra + ")";
+		}
+		else {
+			return string("FieldDecl") + "(" + Name + "," + Type + "," + Extra + ")";
+		}
+	}
 };

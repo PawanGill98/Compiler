@@ -13,14 +13,26 @@ int tokenpos = 1;
 
 %}
 
+escaped_char \\(a|b|t|n|v|f|r|\\|\'|\")
+
 %%
   /*
     Pattern definitions for all tokens 
   */
 
 var                        { return T_VAR; }
-int                        { return T_INT; }
+int                        { yylval.sval = new string(yytext); return T_INTTYPE; }
+bool                        { yylval.sval = new string(yytext); return T_BOOLTYPE; }
 \;                         { return T_SEMICOLON; }
+\,                         { return T_COMMA; }
+\[                         { return T_LSB; }
+\]                         { return T_RSB; }
+\=                         { return T_ASSIGN; }
+\;                         { return T_SEMICOLON; }
+\'([^'\\\n]|{escaped_char})\' { yylval.sval = new string(yytext); return T_CHARCONSTANT; }
+([0-9]+)|(0(x|X)[0-9a-fA-F]+) { yylval.sval = new string(yytext); return T_INTCONSTANT; }
+true {yylval.sval = new string(yytext); return T_TRUE;}
+false {yylval.sval = new string(yytext); return T_FALSE;}
 
 package                    { return T_PACKAGE; }
 \{                         { return T_LCB; }
