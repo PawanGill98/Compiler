@@ -38,6 +38,46 @@ string commaList(list<T> vec) {
     return s;
 }
 
+string ctoi(string str)
+{
+  if(str.empty())
+  {
+    return str;
+  }
+  int val = 0;
+  stringstream s;
+  if(str[1] != '\\')
+  {
+    val = int(str[1]);
+  } 
+  else
+  {
+    switch(str[2])
+    {
+     
+    case 'a': val = 7; break;
+    case 'b': val = 8; break;
+    case 't': val = 9; break;
+    case 'n': val = 10; break;
+    case 'v': val = 11; break;
+    case 'f': val = 12; break;
+    case 'r': val = 13; break;
+    case '\\': val = 92; break;
+    case '\'': val = 39; break;
+    case '\"': val = 34; break;
+    }
+  }
+  s << val;
+  return string(s.str());
+}
+
+class decafStr : public decafAST {
+	string Input;
+public:
+	decafStr(string input) : Input(input) {}
+	string str() { return string(Input); }
+};
+
 /// decafStmtList - List of Decaf statements
 class decafStmtList : public decafAST {
 	list<decafAST *> stmts;
@@ -117,5 +157,145 @@ public:
 		else {
 			return string("FieldDecl") + "(" + Name + "," + Type + "," + Extra + ")";
 		}
+	}
+};
+
+class ConstantAST : public decafAST {
+	string Value;
+	bool isNum;
+public:
+	ConstantAST(string value, bool is) : Value(value), isNum(is) {}
+	string str() {
+		if(isNum) {
+			return string("NumberExpr") + "(" + Value + ")";
+		}
+		else {
+			return string("BoolExpr") + "(" + Value + ")";
+		}
+	}
+};
+
+class MethodDeclAST : public decafAST {
+	string Name;
+	string ReturnType;
+	decafStmtList *ParameterList;
+	decafStmtList *MethodBlock;
+public:
+	MethodDeclAST(string name, string type, decafStmtList *params, decafStmtList *block) : Name(name), ReturnType(type), ParameterList(params), MethodBlock(block) {}
+	string str() {
+		return string("Method") + "(" + Name + "," + ReturnType + "," + getString(ParameterList) + "," + getString(MethodBlock) + ")";
+	}
+};
+
+class MethodVarDefAST : public decafAST {
+	string Name;
+	string Type;
+public:
+	MethodVarDefAST(string name, string type) : Name(name), Type(type) {}
+	string str() {
+		return string("VarDef") + "(" + Name + "," + Type + ")";
+	}
+};
+
+class MethodBlockAST : public decafAST {
+	decafStmtList *VarDecList;
+	decafStmtList *StmtList;
+public:
+	MethodBlockAST(decafStmtList *vdL, decafStmtList *stL) : VarDecList(vdL), StmtList(stL) {}
+	string str() {
+			return string("MethodBlock") + "(" + getString(VarDecList) + "," + getString(StmtList) + ")";
+	}
+};
+
+class BlockAST : public decafAST {
+	decafStmtList *VarDecList;
+	decafStmtList *StmtList;
+public:
+	BlockAST(decafStmtList *vdL, decafStmtList *stL) : VarDecList(vdL), StmtList(stL) {}
+	string str() {
+		return string("Block") + "(" + getString(VarDecList) + "," + getString(StmtList) + ")";
+	}
+};
+
+class AssignAST : public decafAST {
+	string Name;
+	string Value;
+public:
+	AssignAST(string name, string value) : Name(name), Value(value) {}
+	string str() {
+		return string("AssignVar") + "(" + Name + "," + Value + ")";
+	}
+};
+
+class IfAST : public decafAST {
+	decafAST *Condition;
+	decafStmtList *If_Block;
+	decafStmtList *Else_Block;
+public:
+	IfAST(decafAST *cond, decafStmtList *ifblock, decafStmtList *elseblock) : Condition(cond), If_Block(ifblock), Else_Block(elseblock) {}
+	string str() {
+		return string("IfStmt") + "(" + getString(Condition) + "," + getString(If_Block) + "," + getString(Else_Block) + ")";
+	}
+};
+
+class WhileAST : public decafAST {
+	decafAST *Condition;
+	decafStmtList *Block;
+public:
+	WhileAST(decafAST *cond, decafStmtList *block) : Condition(cond), Block(block) {}
+	string str() {
+		return string("WhileStmt") + "(" + getString(Condition) + "," + getString(Block) + ")";
+	}
+};
+
+class ForAST : public decafAST {
+	decafStmtList *PreAssignList;
+	decafAST *Condition;
+	decafStmtList *LoopAssignList;
+	decafAST *Block;
+public:
+	ForAST(decafStmtList *pre, decafAST *cond, decafStmtList *loop, decafAST *b) : PreAssignList(pre), Condition(cond), LoopAssignList(loop), Block(b) {}
+	string str() {
+		return string("ForStmt") + "(" + getString(PreAssignList) + "," + getString(Condition) + "," + getString(LoopAssignList) + "," + getString(Block) + ")";
+	}
+};
+
+class ReturnAST : public decafAST {
+	decafStmtList *Expr;
+public:
+	ReturnAST(decafStmtList *expr) : Expr(expr) {}
+	string str() {
+		return string("ReturnStmt") + "(" + getString(Expr) + ")";
+	}
+};
+
+class BinaryExpr : public decafAST {
+	string BinaryOperator;
+	decafAST *LeftValue;
+	decafAST *RightValue;
+public:
+	BinaryExpr(string op, decafAST *l, decafAST *r) : BinaryOperator(op), LeftValue(l), RightValue(r) {}
+	string str() {
+		return string("BinaryExpr") + "(" + BinaryOperator + "," + getString(LeftValue) + "," + getString(RightValue) + ")";
+	}
+};
+
+class UnaryExpr : public decafAST {
+	string UnaryOperator;
+	decafAST *Expr;
+public:
+	UnaryExpr(string op, decafAST *e) : UnaryOperator(op), Expr(e){}
+	string str() {
+		return string("UnaryExpr") + "(" + UnaryOperator + "," + getString(Expr) + ")";
+	}
+};
+
+class MethodCallAST : public decafAST {
+	string Name;
+	decafStmtList *StmtList;
+public:
+	MethodCallAST(string name, decafStmtList *stL) : Name(name), StmtList(stL) {}
+	string str() {
+		return string("MethodCall") + "(" + Name + "," + getString(StmtList) + ")";
 	}
 };
