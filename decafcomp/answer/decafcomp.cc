@@ -184,7 +184,7 @@ public:
 	string getVarType() {
 		return Type;
 	}
-		llvm::Value *Codegen(){
+	llvm::Value *Codegen(){
 		return NULL;
 	}
 };
@@ -208,10 +208,11 @@ public:
 				args.push_back(type);
 			}
 		}
-		llvm::Function *func = llvm::Function::Create(llvm::FunctionType::get(returnTy, args, false),
-										llvm::Function::ExternalLinkage,
-										Name,
-										TheModule);
+		llvm::Function *func = llvm::Function::Create(
+			llvm::FunctionType::get(returnTy, args, false),
+			llvm::Function::ExternalLinkage,
+			Name,
+			TheModule);
 										
 		descriptor* d = new descriptor;
     	d->type = ReturnType;
@@ -222,29 +223,73 @@ public:
 	}
 };
 
-class FieldDeclAST : public decafAST {
+llvm::Constant* getLLVMDefaultValue(string type)
+{
+  llvm::Constant *value;
+  if(type == "IntType")         
+  { value = Builder.getInt32(0);  } // 32 bit int
+  if(type == "BoolType")  
+  { value = Builder.getInt1(0);   } // 1 bit int  
+  return value;
+}
+
+class FieldDeclScalarAST : public decafAST {
 	string Name;
 	string Type;
-	string Extra;
-	bool isAssignmnet;
 public:
-	FieldDeclAST(string name, string type, string extra, bool assignment) : Name(name), Type(type), Extra(extra), isAssignmnet(assignment) {}
+	FieldDeclScalarAST(string name, string type) : Name(name), Type(type) {}
 	string str() {
-		if (isAssignmnet) {
-			return string("AssignGlobalVar") + "(" + Name + "," + Type + "," + Extra + ")";
-		}
-		else {
-			return string("FieldDecl") + "(" + Name + "," + Type + "," + Extra + ")";
-		}
+		return string("FieldDecl") + "(" + Name + "," + Type + "," + "Scalar" + ")";
 	}
 	llvm::Value *Codegen(){
-		return NULL;
+		llvm::Type *returnTy = getLLVMType(Type);
+		llvm::Constant *defaultVal = getLLVMDefaultValue(Type);
+		llvm::GlobalVariable *gloabalVar = new llvm::GlobalVariable(
+			*TheModule, 
+			returnTy,
+			false,  // variable is mutable
+			llvm::GlobalValue::InternalLinkage, 
+			defaultVal, 
+			Name
+		);
+
+		descriptor* d = new descriptor;
+		d->global_ptr = gloabalVar;
+		(symtbl.front())[Name] = d;
+		return gloabalVar;
+	}
+};
+
+class FieldDeclArrayAST : public decafAST {
+	string Name;
+	string Type;
+	string Size;
+public:
+	FieldDeclArrayAST(string name, string type, string size) : Name(name), Type(type), Size(size) {}
+	string str() {
+		return string("FieldDecl") + "(" + Name + "," + Type + "," + Size + ")";
+	}
+	llvm::Value *Codegen(){
+		int size = atoi(Size.c_str());
+		// array size = size
+		llvm::ArrayType *arrayi32 = llvm::ArrayType::get(Builder.getInt32Ty(), size);
+		// zeroinitalizer: initialize array to all zeroes
+		llvm::Constant *zeroInit = llvm::Constant::getNullValue(arrayi32);
+		// declare a global variable
+		llvm::GlobalVariable *gloabalVar = new llvm::GlobalVariable(*TheModule, arrayi32, false, llvm::GlobalValue::ExternalLinkage, zeroInit, Name);
+		// 3rd parameter to GlobalVariable is false because it is not a constant variable
+
+		descriptor* d = new descriptor;
+		d->global_ptr = gloabalVar;
+		(symtbl.front())[Name] = d;
+		return gloabalVar;
 	}
 };
 
 class ConstantAST : public decafAST {
 	string Value;
 	bool isNum;
+	int num_val = 0;
 public:
 	ConstantAST(string value, bool is) : Value(value), isNum(is) {}
 	string str() {
@@ -255,19 +300,23 @@ public:
 			return string("BoolExpr") + "(" + Value + ")";
 		}
 	}
-	llvm::Value *Codegen(){
-		llvm::Value *val;
+	int getVal(){
+		num_val = atoi(Value.c_str());
+		return num_val;
+	}
+	string getID() { return Value; }
+	llvm::Constant *Codegen(){
+		llvm::Constant *val;
 		if(isNum) {
 			int num;
 			num = atoi(Value.c_str());
-
 			for(int i = 0; i < Value.size(); i++) {
 				if((Value[i] == 'x') || Value[i] == 'X') {
 					const char *hexstring = Value.c_str();
 					num = (int)strtol(hexstring, NULL, 16);
 				}
 			}
-			val = llvm::ConstantInt::get(TheContext, llvm::APInt(32, num));
+			val = Builder.getInt32(num);
 			return val;
 		}
 		else {
@@ -275,6 +324,33 @@ public:
 			if(Value == "False") { val = Builder.getInt1(0);}
 			return val;
 		}
+	}
+};
+
+class FieldDeclAssignAST : public decafAST {
+	string Name;
+	string Type;
+	ConstantAST *Constant;
+public:
+	FieldDeclAssignAST(string name, string type, ConstantAST *constant) : Name(name), Type(type), Constant(constant) {}
+	string str() {
+		return string("AssignGlobalVar") + "(" + Name + "," + Type + "," + getString(Constant) + ")";
+	}
+	llvm::Value *Codegen(){
+		llvm::Type *returnTy = getLLVMType(Type);
+		llvm::Constant *value = Constant->Codegen();
+		llvm::GlobalVariable *gloabalVar = new llvm::GlobalVariable(
+			*TheModule, 
+			returnTy, 
+			false,  // variable is mutable
+			llvm::GlobalValue::InternalLinkage, 
+			value,
+			Name);
+
+		descriptor* d = new descriptor;
+		d->global_ptr = gloabalVar;
+		(symtbl.front())[Name] = d;
+		return gloabalVar;
 	}
 };
 
@@ -687,21 +763,46 @@ public:
 		} 
 	}
 	llvm::Value *Codegen() {
-		llvm::Value *val;
-		descriptor *d;
-		d = access_symtbl(Value->getID());
+		if(Value->isArray()) {
 
-		llvm::AllocaInst *Alloca;
-		Alloca = d->alloca_ptr;
+			llvm::Value *val;
+			descriptor *d;
+			d = access_symtbl(Value->getID());
 
-		llvm::Value *rvalue = Expr->Codegen();
+			llvm::GlobalVariable *global;
+			global = d->global_ptr;
 
-		//llvm::Value *rvalue = llvm::ConstantInt::get(TheContext, llvm::APInt(32, 101));
-		const llvm::PointerType *ptrTy = rvalue->getType()->getPointerTo();
-		if(ptrTy == Alloca->getType()){
-			val = Builder.CreateStore(rvalue, Alloca);
+			llvm::Value *rvalue = Expr->Codegen();
+
+			//llvm::Value *rvalue = llvm::ConstantInt::get(TheContext, llvm::APInt(32, 101));
+			const llvm::PointerType *ptrTy = rvalue->getType()->getPointerTo();
+			if(ptrTy == global->getType()){
+				return NULL;
+			}
+			llvm::ArrayType *arrayi32 = llvm::ArrayType::get(Builder.getInt32Ty(), 10);
+			llvm::Value *ArrayLoc = Builder.CreateStructGEP(arrayi32, global, 0, "arrayloc");
+			llvm::Value *Index = Builder.getInt32(1); // access Foo[8]
+			llvm::Value *ArrayIndex = Builder.CreateGEP(Builder.getInt32Ty(), ArrayLoc, Index, "arrayindex");
+			llvm::Value *ArrayStore = Builder.CreateStore(Builder.getInt32(5555), ArrayIndex); // Foo[8] = 1
+			return ArrayStore;
 		}
-		return val;
+		else {
+			llvm::Value *val;
+			descriptor *d;
+			d = access_symtbl(Value->getID());
+
+			llvm::AllocaInst *Alloca;
+			Alloca = d->alloca_ptr;
+
+			llvm::Value *rvalue = Expr->Codegen();
+
+			//llvm::Value *rvalue = llvm::ConstantInt::get(TheContext, llvm::APInt(32, 101));
+			const llvm::PointerType *ptrTy = rvalue->getType()->getPointerTo();
+			if(ptrTy == Alloca->getType()){
+				val = Builder.CreateStore(rvalue, Alloca);
+			}
+			return val;
+		}
 	}
 };
 

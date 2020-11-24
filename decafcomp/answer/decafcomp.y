@@ -169,9 +169,9 @@ extern_list: /* extern_list can be empty */
 
 extern_defn: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_list T_RPAREN method_type T_SEMICOLON
     {
-        ExternFunctionAST *ex;
-        ex = new ExternFunctionAST(*$3, *$7, (decafStmtList *)$5);
-        $$ = ex;
+        ExternFunctionAST *externDef;
+        externDef = new ExternFunctionAST(*$3, *$7, (decafStmtList *)$5);
+        $$ = externDef;
     }
     ;
 
@@ -219,12 +219,14 @@ field_decls:
     }
     ;
 
+
+
 field_decl: T_VAR id_list decaf_type T_SEMICOLON
     {
         decafStmtList* slist = new decafStmtList();
-        FieldDeclAST* node;
+        FieldDeclScalarAST* node;
         for(int i = 0; i < $2->size(); i++) {
-            node = new FieldDeclAST((*$2)[i], *$3, "Scalar", false);
+            node = new FieldDeclScalarAST((*$2)[i], *$3);
             slist->push_back(node);
         }
         $$ = slist;
@@ -232,16 +234,16 @@ field_decl: T_VAR id_list decaf_type T_SEMICOLON
     | T_VAR id_list array_type T_SEMICOLON
     {
         decafStmtList* slist = new decafStmtList();
-        FieldDeclAST* node;
+        FieldDeclArrayAST* node;
         for(int i = 0; i < $2->size(); i++) {
-            node = new FieldDeclAST((*$2)[i], *$3.type, *$3.size, false);
+            node = new FieldDeclArrayAST((*$2)[i], *$3.type, *$3.size);
             slist->push_back(node);
         }
         $$ = slist;
     }
     | T_VAR id_list decaf_type T_ASSIGN constant T_SEMICOLON
     {
-        $$ = new FieldDeclAST((*$2)[0], *$3, getString((decafAST *)$5), true);
+        $$ = new FieldDeclAssignAST((*$2)[0], *$3, (ConstantAST *)$5);
     }
     ;
 

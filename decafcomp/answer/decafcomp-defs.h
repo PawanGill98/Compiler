@@ -41,6 +41,7 @@ typedef struct descriptor
   llvm::Function*     func_ptr;
   vector<llvm::Type*> arg_types;
   vector<string>      arg_names;
+  llvm::GlobalVariable *global_ptr;
 }descriptor; 
 
 typedef map<string, descriptor*> symbol_table;
