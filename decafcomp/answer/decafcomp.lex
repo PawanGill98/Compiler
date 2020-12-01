@@ -68,6 +68,8 @@ string                                              { yylval.sval = new string("
 \&\&                                                { yylval.sval = new string("And"); return T_AND; }
 \|\|                                                { yylval.sval = new string("Or"); return T_OR; }
 
+"//".*                                              { }
+
 ([0-9]+)|(0(x|X)[0-9a-fA-F]+)                       { yylval.sval = new string(yytext); return T_INTCONSTANT; }
 \'([^'\\\n]|{escaped_char})\'                       { yylval.sval = new string(yytext); return T_CHARCONSTANT; }
 \"([ -\!\#-\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\"))*\"   { yylval.sval = new string(yytext); return T_STRINGCONSTANT; }

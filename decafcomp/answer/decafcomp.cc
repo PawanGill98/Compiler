@@ -286,7 +286,7 @@ public:
 	llvm::Value *Codegen(){
 		int size = atoi(Size.c_str());
 		// array size = size
-		llvm::ArrayType *arrayi32 = llvm::ArrayType::get(Builder.getInt32Ty(), size);
+		llvm::ArrayType *arrayi32 = llvm::ArrayType::get(getLLVMType(Type), size);
 		// zeroinitalizer: initialize array to all zeroes
 		llvm::Constant *zeroInit = llvm::Constant::getNullValue(arrayi32);
 		// declare a global variable
