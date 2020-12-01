@@ -106,26 +106,22 @@ llvm::Function *gen_print_int_def() {
 %token T_FOR
 %token T_ELSE
 %token T_RETURN
-%token <sval> T_CONTINUE
-%token <sval> T_BREAK
+%token T_CONTINUE
+%token T_BREAK
 %token <sval> T_STRINGCONSTANT
 
 
 
 
 
-%type <sval> arithmetic_operator boolean_operator
 
-
-
-%type <sval> binary_operator unary_operator
 %type <ast> constant
 %type <vecptr> id_list
-%type <ast> statements statement assign assign_list return_stmt if_stmt while_stmt for_stmt block expr method_arg method_arg_list method_call
+%type <ast> statements statement assign assign_list return_stmt if_stmt while_stmt for_stmt block expr method_arg method_arg_list method_call break_stmt continue_stmt
 
 
 %type <ast> extern_list decafpackage extern_type_list extern_defn
-%type <ast> method_decls method_block var_decl var_decls method_parameter_list method_decl field_decl field_decls value
+%type <ast> method_decls method_block var_decl var_decls method_parameter_list method_decl field_decl field_decls value_arr value_var
 %type <sval> decaf_type extern_type method_type
 %type <s> array_type
 
@@ -243,7 +239,7 @@ field_decl: T_VAR id_list decaf_type T_SEMICOLON
     }
     | T_VAR id_list decaf_type T_ASSIGN constant T_SEMICOLON
     {
-        $$ = new FieldDeclAssignAST((*$2)[0], *$3, (ConstantAST *)$5);
+        $$ = new FieldDeclAssignAST((*$2)[0], *$3, (decafAST *)$5);
     }
     ;
 
@@ -386,6 +382,8 @@ statements: statement statements
 
 statement: method_block
     { $$ = $1; }
+    | block
+    { $$ = $1; }
     | if_stmt
     { $$ = $1; }
     | while_stmt
@@ -398,15 +396,25 @@ statement: method_block
     { $$ = $1; }
     | for_stmt
     { $$ = $1; }
-    | T_BREAK T_SEMICOLON
+    | break_stmt
+    { $$ = $1; }
+    | continue_stmt
+    { $$ = $1; }
+    ;
+
+break_stmt: T_BREAK T_SEMICOLON
     {
-        decafStr *str_id = new decafStr(*$1);
-        $$ = str_id;
+        BreakAST *b;
+        b = new BreakAST();
+        $$ = b;
     }
-    | T_CONTINUE T_SEMICOLON
+    ;
+
+continue_stmt: T_CONTINUE T_SEMICOLON
     {
-        decafStr *str_id = new decafStr(*$1);
-        $$ = str_id;
+        ContinueAST *c;
+        c = new ContinueAST();
+        $$ = c;
     }
     ;
 
@@ -418,7 +426,9 @@ block: begin_block var_decls statements end_block
     }
     ;
 
-expr: value
+expr: value_var
+    { $$ = $1; }
+    | value_arr
     { $$ = $1; }
     | method_call
     { $$ = $1; }
@@ -530,42 +540,44 @@ expr: value
     {  $$ = $2; }
     ;
 
-value: T_ID T_LSB expr T_RSB
-     {        
-       ValueAST* v;
-       v = new ValueAST(*$1, (decafStmtList*) $3);
-       $$ = v;
-     }
-     | T_ID 
+value_var: T_ID 
      { 
-       ValueAST* v;
-       v = new ValueAST(*$1);
-       $$ = v;
+        ValueVariableExprAST* v;
+        v = new ValueVariableExprAST(*$1);
+        $$ = v;
      }   
+     ;
+
+value_arr: T_ID T_LSB expr T_RSB
+     {        
+        ValueArrayLocExprAST* v;
+        v = new ValueArrayLocExprAST(*$1, (decafStmtList*) $3);
+        $$ = v;
+     }
      ;
 
 constant: T_INTCONSTANT
     {
-        ConstantAST *c;
-        c = new ConstantAST(*$1, true);
+        ConstantNumberExprAST *c;
+        c = new ConstantNumberExprAST(*$1);
         $$ = c; 
     }
     | T_CHARCONSTANT
     {
-        ConstantAST *c;
-        c = new ConstantAST(ctoi(*$1), true);
+        ConstantNumberExprAST *c;
+        c = new ConstantNumberExprAST(ctoi(*$1));
         $$ = c; 
     }
     | T_TRUE
     {
-        ConstantAST *c;
-        c = new ConstantAST(*$1, false);
+        ConstantBoolExprAST *c;
+        c = new ConstantBoolExprAST(*$1);
         $$ = c; 
     }
     | T_FALSE
     {
-        ConstantAST *c;
-        c = new ConstantAST(*$1, false);
+        ConstantBoolExprAST *c;
+        c = new ConstantBoolExprAST(*$1);
         $$ = c; 
     }
     ;
@@ -608,60 +620,19 @@ method_arg_list: method_arg T_COMMA method_arg_list
     { $$ = NULL; }
     ;
 
-binary_operator: arithmetic_operator
-    { $$ = $1; }
-    | boolean_operator
-    { $$ = $1; }
-    ;
 
-arithmetic_operator: T_PLUS
-    { $$ = $1; }
-    | T_MINUS
-    { $$ = $1; }
-    | T_MOD
-    { $$ = $1; }
-    | T_DIV
-    { $$ = $1; }
-    | T_MULT
-    { $$ = $1; }
-    | T_LEFTSHIFT
-    { $$ = $1; }
-    | T_RIGHTSHIFT
-    { $$ = $1; }
-    ;
-
-boolean_operator: T_AND
-    { $$ = $1; }
-    | T_OR
-    { $$ = $1; }
-    | T_LEQ
-    { $$ = $1; }
-    | T_GEQ
-    { $$ = $1; }
-    | T_GT
-    { $$ = $1; }
-    | T_LT
-    { $$ = $1; }
-    | T_EQ
-    { $$ = $1; }
-    | T_NEQ
-    { $$ = $1; }
-    ;
-
-unary_operator: T_NOT
-    { $$ = $1; }
-    | T_MINUS
-    {
-        $$ = new string("UnaryMinus");
-    }
-    ;
-
-assign: value T_ASSIGN expr
+assign: value_var T_ASSIGN expr
     {
         //decafStr *id = new decafStr( string("AssignVar") + "(" + *$1 + "," + getString((decafAST *)$3) + ")" );
         //$$ = id;
-        AssignAST *a;
-        a = new AssignAST((ValueAST*)$1,$3);
+        AssignVarAST *a;
+        a = new AssignVarAST((ValueVariableExprAST*)$1, $3);
+        $$ = a;
+    }
+    | value_arr T_ASSIGN expr
+    {
+        AssignArrayAST *a;
+        a = new AssignArrayAST((ValueArrayLocExprAST*)$1, $3);
         $$ = a;
     }
     ;
@@ -695,13 +666,13 @@ for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON expr T_SEMICOLON assign_list T_
 if_stmt: T_IF T_LPAREN expr T_RPAREN block
     {
         IfAST *if_s;
-        if_s = new IfAST((decafAST *)$3, (decafStmtList *)$5, new decafStmtList());
+        if_s = new IfAST((decafAST *)$3, (BlockAST *)$5, NULL);
         $$ = if_s;
     }
     | T_IF T_LPAREN expr T_RPAREN block T_ELSE block
     {
         IfAST *if_s;
-        if_s = new IfAST((decafAST *)$3, (decafStmtList *)$5, new decafStmtList());
+        if_s = new IfAST((decafAST *)$3, (BlockAST *)$5, (BlockAST *)$7);
         $$ = if_s;
     }
     ;
@@ -767,14 +738,6 @@ method_type: T_VOID
         $$ = $1;
     }
     ;
-
-ignore: ignore T_ID
-    | ignore T_LCB
-    | ignore T_RCB
-	| T_ID
-	| T_LCB
-	| T_RCB
-	;
 
 %%
 

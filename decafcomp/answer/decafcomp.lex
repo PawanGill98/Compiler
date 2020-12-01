@@ -30,8 +30,8 @@ if                                                  { return T_IF; }
 else                                                { return T_ELSE; }
 return                                              { return T_RETURN; }
 
-break                                               { yylval.sval = new string("BreakStmt"); return T_BREAK; }
-continue                                            { yylval.sval = new string("ContinueStmt"); return T_CONTINUE; }
+break                                               { return T_BREAK; }
+continue                                            { return T_CONTINUE; }
 true                                                { yylval.sval = new string("True"); return T_TRUE; }
 false                                               { yylval.sval = new string("False"); return T_FALSE; }
 
