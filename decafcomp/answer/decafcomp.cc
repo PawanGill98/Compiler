@@ -890,6 +890,9 @@ public:
 		return string("WhileStmt") + "(" + getString(Condition) + "," + getString(Block) + ")";
 	}
 	llvm::Value *Codegen(){
+		symbol_table syms;
+		symtbl.push_front(syms);
+
 		llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 		llvm::Function *func = CurBB->getParent();
 	
@@ -919,6 +922,7 @@ public:
 		Builder.CreateBr(WhileStartBB);
 
 		Builder.SetInsertPoint(WhileEndBB);
+		symtbl.pop_front();
 		return NULL;
 	}
 };
@@ -934,14 +938,16 @@ public:
 		return string("ForStmt") + "(" + getString(PreAssignList) + "," + getString(Condition) + "," + getString(LoopAssignList) + "," + getString(Block) + ")";
 	}
 	llvm::Value *Codegen(){
+		symbol_table syms;
+		symtbl.push_front(syms);
+
 		llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
-		llvm::Function *func     = CurBB->getParent();
+		llvm::Function *func = CurBB->getParent();
 		
 		llvm::BasicBlock* ForStartBB = llvm::BasicBlock::Create(TheContext, "forstart", func);
 		llvm::BasicBlock* ForTrueBB  = llvm::BasicBlock::Create(TheContext, "fortrue",  func);
 		llvm::BasicBlock* ForPostBB  = llvm::BasicBlock::Create(TheContext, "forpost",  func);
 		llvm::BasicBlock* ForEndBB   = llvm::BasicBlock::Create(TheContext, "forend",   func);     
-
 
 		descriptor* d1 = new descriptor;
 		d1->block_ptr = ForStartBB;
@@ -959,7 +965,6 @@ public:
 		d4->block_ptr = ForEndBB;
 		(symtbl.front())["loopend"]    = d4;
 
-
 		PreAssignList->Codegen();
 
 		Builder.CreateBr(ForStartBB);
@@ -976,6 +981,7 @@ public:
 		Builder.CreateBr(ForStartBB);
 
 		Builder.SetInsertPoint(ForEndBB);
+		symtbl.pop_front();
 		return NULL;
 	}
 };
