@@ -66,64 +66,66 @@ llvm::Function *gen_print_int_def() {
 
  }
 
-%token T_VAR
-%token <sval> T_SEMICOLON
-%token T_COMMA
-%token <sval> T_INTTYPE
+%token T_EXTERN
+%token T_FUNC
+%token T_PACKAGE
+
+%token T_LCB
+%token T_RCB
 %token T_LSB
-%token <sval> T_INTCONSTANT
 %token T_RSB
+%token T_LPAREN
+%token T_RPAREN
+%token T_COMMA
+%token <sval> T_SEMICOLON
+
+%token T_IF
+%token T_ELSE
+%token T_FOR
+%token T_WHILE
+%token T_BREAK
+%token T_CONTINUE
+%token T_RETURN
+
+%token T_VAR
 %token T_ASSIGN
+
+%token <sval> T_VOID
+%token <sval> T_INTTYPE
 %token <sval> T_BOOLTYPE
-%token <sval> T_CHARCONSTANT
+%token <sval> T_STRINGTYPE
 %token <sval> T_TRUE
 %token <sval> T_FALSE
 
-%token T_LPAREN
-%token T_RPAREN
-%token <sval> T_STRINGTYPE
-%token T_EXTERN
-%token T_FUNC
-
-%token T_PACKAGE
-%token T_LCB
-%token T_RCB
-%token <sval> T_ID
-%token <sval> T_VOID
-
-%token <sval> T_PLUS T_MINUS T_DIV T_MULT T_MOD T_EQ T_NEQ T_LEFTSHIFT T_RIGHTSHIFT T_LT T_GT T_GEQ T_LEQ T_AND T_OR T_NOT
+%token <sval> T_PLUS T_MINUS T_DIV T_MULT T_MOD T_EQ T_NEQ T_LEFTSHIFT T_RIGHTSHIFT T_LT T_GT T_LEQ T_GEQ T_AND T_OR T_NOT
 
 %left T_OR
 %left T_AND
 %left T_EQ T_NEQ
-%left T_GEQ T_LEQ T_LT T_RT
-%left T_PLUS T_MINUS 
+%left T_LT T_GT T_LEQ T_GEQ
+%left T_PLUS T_MINUS
 %left T_LEFTSHIFT T_RIGHTSHIFT
 %left T_MULT T_DIV T_MOD
 
-%token T_IF
-%token T_WHILE
-%token T_FOR
-%token T_ELSE
-%token T_RETURN
-%token T_CONTINUE
-%token T_BREAK
+%token <sval> T_INTCONSTANT
+%token <sval> T_CHARCONSTANT
 %token <sval> T_STRINGCONSTANT
+%token <sval> T_ID
 
+%type <ast> extern_list extern_defn extern_type_list
+%type <ast> decafpackage
+%type <ast> field_decls field_decl
+%type <ast> method_decls method_decl method_parameter_list method_block
+%type <ast> var_decls var_decl
+%type <ast> statements statement
 
+%type <ast> block assign_list assign method_call method_arg_list method_arg
+%type <ast> if_stmt for_stmt while_stmt break_stmt continue_stmt return_stmt
+%type <ast> expr constant value_var value_arr
 
-
-
-
-%type <ast> constant
-%type <vecptr> id_list
-%type <ast> statements statement assign assign_list return_stmt if_stmt while_stmt for_stmt block expr method_arg method_arg_list method_call break_stmt continue_stmt
-
-
-%type <ast> extern_list decafpackage extern_type_list extern_defn
-%type <ast> method_decls method_block var_decl var_decls method_parameter_list method_decl field_decl field_decls value_arr value_var
 %type <sval> decaf_type extern_type method_type
 %type <s> array_type
+%type <vecptr> id_list
 
 %%
 
@@ -214,8 +216,6 @@ field_decls:
         $$ = slist;
     }
     ;
-
-
 
 field_decl: T_VAR id_list decaf_type T_SEMICOLON
     {
@@ -551,7 +551,7 @@ value_var: T_ID
 value_arr: T_ID T_LSB expr T_RSB
      {        
         ValueArrayLocExprAST* v;
-        v = new ValueArrayLocExprAST(*$1, (decafStmtList*) $3);
+        v = new ValueArrayLocExprAST(*$1, (decafAST*) $3);
         $$ = v;
      }
      ;

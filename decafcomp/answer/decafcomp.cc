@@ -521,7 +521,35 @@ public:
 	}
 	void back() {
 		Builder.SetInsertPoint(basic_b);
+/*		symbol_table syms;
+		symtbl.push_front(syms);
+		llvm::Value *val;
+		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
+		Builder.SetInsertPoint(BB);
+		descriptor* d  = access_symtbl(Name);
+
+		llvm::Function* TheFunction = d->func_ptr;
+		vector<string> arg_names = d->arg_names;
+
+		int idx = 0;
+		for (auto &Arg : TheFunction->args()) {
+			llvm::AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, arg_names[idx], Arg.getType());
+
+			const llvm::PointerType *ptrTy = Arg.getType()->getPointerTo();
+			if(ptrTy == Alloca->getType()){
+				val = Builder.CreateStore(&Arg, Alloca);
+			}
+
+			descriptor* d = new descriptor;
+			d->alloca_ptr = Alloca;
+			d->global_ptr = NULL;
+			string st = arg_names[idx];
+			idx++;
+			(symtbl.front())[st] = d; 
+		}
+*/
 		if(MethodBlock != NULL) { MethodBlock->Codegen(); }
+//		symtbl.pop_front();
 	}
 	llvm::Value *Codegen(){
 		MethodBlock->setReturn(ReturnType);
@@ -549,6 +577,7 @@ public:
 		d->type       = ReturnType;
 		d->func_ptr   = TheFunction;
 		d->arg_types  = args;
+		d->arg_names = arg_names;
 		(symtbl.front())[Name] = d;
 
 		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
@@ -632,7 +661,7 @@ public:
 	}
 	llvm::Value *Codegen() { 
 		llvm::Value *val = NULL;
-		TheModule->setModuleIdentifier(llvm::StringRef(Name)); 
+		TheModule->setModuleIdentifier(llvm::StringRef(Name));
 		if (NULL != FieldDeclList) {
 			val = FieldDeclList->Codegen();
 		}
@@ -645,7 +674,7 @@ public:
 				e->back();
 			}
 
-		} 
+		}
 		// Q: should we enter the class name into the symbol table?
 		return val; 
 	}
@@ -679,7 +708,7 @@ public:
 class ValueVariableExprAST : public decafAST
 {
 	string Name;
-	decafStmtList* IndexExpr;
+	decafAST* IndexExpr;
 public: 
 	ValueVariableExprAST(string name) : Name(name) {}
 	string getID() { return Name; }
@@ -711,14 +740,16 @@ public:
 class ValueArrayLocExprAST : public decafAST
 {
 	string Name;
-	decafStmtList* IndexExpr;
+	decafAST* IndexExpr;
 public: 
-	ValueArrayLocExprAST(string name, decafStmtList* index) : Name(name), IndexExpr(index) {}
+	ValueArrayLocExprAST(string name, decafAST* index) : Name(name), IndexExpr(index) {}
 	
 	string getID() { return Name; }  
-	decafStmtList* getIndexExpr() { return IndexExpr; }
+	decafAST* getIndexExpr() { return IndexExpr; }
 
 	llvm::Value *getIndexVal() {
+		ConstantBoolExprAST* derived = dynamic_cast<ConstantBoolExprAST*>(IndexExpr);
+		if(derived) { throw runtime_error("Bool Index"); }
 		llvm::Value *indexVal = IndexExpr->Codegen();
 		return indexVal;
 	}
@@ -738,6 +769,9 @@ public:
 			}
 			else if(d->global_ptr != NULL) {
 				llvm::Value *ArrayLoc = Builder.CreateStructGEP(d->global_ptr, 0, "arrayloc");
+
+				ConstantBoolExprAST* derived = dynamic_cast<ConstantBoolExprAST*>(IndexExpr);
+				if(derived) { throw runtime_error("Bool Index"); }
 				llvm::Value *indexVal = IndexExpr->Codegen();
 				llvm::Value *Index = indexVal; // access Foo[8]
 				llvm::Value *ArrayIndex = Builder.CreateGEP(ArrayLoc, Index, "arrayindex");
@@ -837,6 +871,9 @@ public:
 		return string("IfStmt") + "(" + getString(Condition) + "," + getString(If_Block) + "," + getString(Else_Block) + ")";
 	}
 	llvm::Value *Codegen(){
+//		symbol_table syms;
+//		symtbl.push_front(syms);
+
 		llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 		llvm::Function *func = CurBB->getParent();
 
@@ -877,6 +914,7 @@ public:
 		Builder.CreateBr(IfEndBB);
 		
 		Builder.SetInsertPoint(IfEndBB);
+//		symtbl.pop_front();
 		return NULL;
   	}
 };
