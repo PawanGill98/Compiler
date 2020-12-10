@@ -81,13 +81,6 @@ string ctoi(string str)
   return string(s.str());
 }
 
-llvm::Function *genPrintIntDef() {
-  // create a extern definition for print_int
-  std::vector<llvm::Type*> args;
-  args.push_back(Builder.getInt32Ty()); // print_int takes one i32 argument
-  return llvm::Function::Create(llvm::FunctionType::get(Builder.getVoidTy(), args, false), llvm::Function::ExternalLinkage, "print_int", TheModule);
-}
-
 descriptor* access_symtbl(string id)
 {
   for(symbol_table_list::iterator i = symtbl.begin(); i != symtbl.end(); ++i)
@@ -116,16 +109,6 @@ string getString(decafAST *d) {
 		return string("None");
 	}
 }
-
-class decafStr : public decafAST {
-	string Input;
-public:
-	decafStr(string input) : Input(input) {}
-	string str() { return string(Input); }
-	llvm::Value *Codegen() { 
-		return NULL;
-	}
-};
 
 template <class T>
 string commaList(list<T> vec) {
@@ -170,8 +153,6 @@ public:
 		return listCodegen<decafAST *>(stmts); 
 	}
 };
-
-
 
 class ExternVarDefAST : public decafAST {
 	string Type;
@@ -298,47 +279,6 @@ public:
 		d->alloca_ptr = NULL;
 		(symtbl.front())[Name] = d;
 		return gloabalVar;
-	}
-};
-
-class ConstantAST : public decafAST {
-	string Value;
-	bool isNum;
-	int num_val = 0;
-public:
-	ConstantAST(string value, bool is) : Value(value), isNum(is) {}
-	string str() {
-		if(isNum) {
-			return string("NumberExpr") + "(" + Value + ")";
-		}
-		else {
-			return string("BoolExpr") + "(" + Value + ")";
-		}
-	}
-	int getVal(){
-		num_val = atoi(Value.c_str());
-		return num_val;
-	}
-	string getID() { return Value; }
-	llvm::Constant *Codegen(){
-		llvm::Constant *val;
-		if(isNum) {
-			int num;
-			num = atoi(Value.c_str());
-			for(int i = 0; i < Value.size(); i++) {
-				if((Value[i] == 'x') || Value[i] == 'X') {
-					const char *hexstring = Value.c_str();
-					num = (int)strtol(hexstring, NULL, 16);
-				}
-			}
-			val = Builder.getInt32(num);
-			return val;
-		}
-		else {
-			if(Value == "True" ) { val = Builder.getInt1(1);}
-			if(Value == "False") { val = Builder.getInt1(0);}
-			return val;
-		}
 	}
 };
 
@@ -521,35 +461,7 @@ public:
 	}
 	void back() {
 		Builder.SetInsertPoint(basic_b);
-/*		symbol_table syms;
-		symtbl.push_front(syms);
-		llvm::Value *val;
-		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
-		Builder.SetInsertPoint(BB);
-		descriptor* d  = access_symtbl(Name);
-
-		llvm::Function* TheFunction = d->func_ptr;
-		vector<string> arg_names = d->arg_names;
-
-		int idx = 0;
-		for (auto &Arg : TheFunction->args()) {
-			llvm::AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, arg_names[idx], Arg.getType());
-
-			const llvm::PointerType *ptrTy = Arg.getType()->getPointerTo();
-			if(ptrTy == Alloca->getType()){
-				val = Builder.CreateStore(&Arg, Alloca);
-			}
-
-			descriptor* d = new descriptor;
-			d->alloca_ptr = Alloca;
-			d->global_ptr = NULL;
-			string st = arg_names[idx];
-			idx++;
-			(symtbl.front())[st] = d; 
-		}
-*/
 		if(MethodBlock != NULL) { MethodBlock->Codegen(); }
-//		symtbl.pop_front();
 	}
 	llvm::Value *Codegen(){
 		MethodBlock->setReturn(ReturnType);
